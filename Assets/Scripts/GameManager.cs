@@ -2,14 +2,17 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
+using System.Linq;
 
 public class GameManager : MonoBehaviour
 {
     [Header("Game Objects")]
-    public GameObject[] stars;
-    public GameObject[] cosmicJunks;
+    public List<GameObject> stars = new List<GameObject>();
+    public List<GameObject> cosmicJunks = new List<GameObject>();
     public LineRenderer linePrefab;
     public GameObject boardObject;
+    public GameObject starPrefab; // Assuming you have a star prefab
+    public GameObject junkPrefab; // Assuming you have a junk prefab
 
     [Header("UI References")]
     private Canvas gameCanvas;
@@ -45,7 +48,8 @@ public class GameManager : MonoBehaviour
         }
         remainingLines = requiredLines;
         InitializeUI();
-        UpdateUI(); // Update UI immediately to show initial line count
+        GenerateLevel(); // Generate initial level
+        UpdateUI();
     }
 
     private void InitializeUI()
@@ -621,7 +625,271 @@ public class GameManager : MonoBehaviour
         // Hide game over panel
         gameOverPanel.SetActive(false);
 
+        // Generate a new level
+        GenerateLevel();
+
         // Update UI
         UpdateUI();
+    }
+
+ [Header("Level Generation Settings")]
+    public int minStars = 1;
+    public int maxStars = 3;
+    public int minJunks = 1;
+    public int maxJunks = 5;
+    public float minObjectSize = 0.5f;
+    public float maxObjectSize = 1.5f;
+
+    private void GenerateLevel()
+    {
+        ClearLevel();
+        
+        List<Vector2[]> solutionLines = GenerateValidSolution();
+        List<Polygon> areas = CalculateAreas(solutionLines);
+        PlaceObjectsInAreas(areas);
+        
+        // Remove temporary solution lines
+        foreach (var line in solutionLines)
+        {
+            Debug.DrawLine(line[0], line[1], Color.yellow, 5f); // Visualize solution in Scene view
+        }
+
+        remainingLines = requiredLines;
+        UpdateUI();
+    }
+
+    private void ClearLevel()
+    {
+        foreach (var star in stars)
+            Destroy(star);
+        foreach (var junk in cosmicJunks)
+            Destroy(junk);
+        foreach (var line in linesDrawn)
+            Destroy(line.gameObject);
+            
+        stars.Clear();
+        cosmicJunks.Clear();
+        linesDrawn.Clear();
+    }
+
+    private List<Vector2[]> GenerateValidSolution()
+    {
+        List<Vector2[]> solution = new List<Vector2[]>();
+        
+        for (int i = 0; i < requiredLines; i++)
+        {
+            Vector2 start, end;
+            do
+            {
+                start = GetRandomPointOnBoardEdge();
+                end = GetRandomPointOnBoardEdge();
+            } while (!IsValidLine(start, end, solution));
+
+            solution.Add(new Vector2[] { start, end });
+        }
+        
+        return solution;
+    }
+
+    private Vector2 GetRandomPointOnBoardEdge()
+    {
+        Vector2 boardSize = boardBounds.size;
+        float t = Random.value;
+
+        if (Random.value < 0.5f) // Vertical edges
+        {
+            float x = Random.value < 0.5f ? -boardSize.x / 2 : boardSize.x / 2;
+            return new Vector2(x, Mathf.Lerp(-boardSize.y / 2, boardSize.y / 2, t));
+        }
+        else // Horizontal edges
+        {
+            float y = Random.value < 0.5f ? -boardSize.y / 2 : boardSize.y / 2;
+            return new Vector2(Mathf.Lerp(-boardSize.x / 2, boardSize.x / 2, t), y);
+        }
+    }
+
+    private bool IsValidLine(Vector2 start, Vector2 end, List<Vector2[]> existingLines)
+    {
+        // Check if the line is too short
+        if (Vector2.Distance(start, end) < minObjectSize * 2)
+            return false;
+
+        // Check if the line intersects with existing lines
+        foreach (var line in existingLines)
+        {
+            if (LineSegmentsIntersect(start, end, line[0], line[1]))
+                return false;
+        }
+
+        return true;
+    }
+
+    private bool LineSegmentsIntersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
+    {
+        float d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+
+        if (d == 0)
+            return false;
+
+        float t = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+        float u = ((p3.x - p1.x) * (p2.y - p1.y) - (p3.y - p1.y) * (p2.x - p1.x)) / d;
+
+        return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+    }
+
+    private List<Polygon> CalculateAreas(List<Vector2[]> lines)
+    {
+        // This is a simplified area calculation. For a more accurate implementation,
+        // you might need a more sophisticated algorithm to handle complex polygons.
+        List<Polygon> areas = new List<Polygon>();
+        List<Vector2> intersections = new List<Vector2>();
+
+        // Find all intersections
+        for (int i = 0; i < lines.Count; i++)
+        {
+            for (int j = i + 1; j < lines.Count; j++)
+            {
+                Vector2 intersection;
+                if (LineIntersection(lines[i][0], lines[i][1], lines[j][0], lines[j][1], out intersection))
+                {
+                    intersections.Add(intersection);
+                }
+            }
+        }
+
+        // Add board corners
+        Vector2 boardSize = boardBounds.size;
+        intersections.Add(new Vector2(-boardSize.x / 2, -boardSize.y / 2));
+        intersections.Add(new Vector2(boardSize.x / 2, -boardSize.y / 2));
+        intersections.Add(new Vector2(boardSize.x / 2, boardSize.y / 2));
+        intersections.Add(new Vector2(-boardSize.x / 2, boardSize.y / 2));
+
+        // Create polygons from intersections
+        // This is a simplified approach and might not work for all cases
+        for (int i = 0; i < intersections.Count; i++)
+        {
+            for (int j = i + 1; j < intersections.Count; j++)
+            {
+                for (int k = j + 1; k < intersections.Count; k++)
+                {
+                    areas.Add(new Polygon(new List<Vector2> { intersections[i], intersections[j], intersections[k] }));
+                }
+            }
+        }
+
+        return areas;
+    }
+
+    private bool LineIntersection(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out Vector2 intersection)
+    {
+        float d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+
+        if (d == 0)
+        {
+            intersection = Vector2.zero;
+            return false;
+        }
+
+        float t = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+        float u = ((p3.x - p1.x) * (p2.y - p1.y) - (p3.y - p1.y) * (p2.x - p1.x)) / d;
+
+        if (t < 0 || t > 1 || u < 0 || u > 1)
+        {
+            intersection = Vector2.zero;
+            return false;
+        }
+
+        intersection = p1 + t * (p2 - p1);
+        return true;
+    }
+
+    private void PlaceObjectsInAreas(List<Polygon> areas)
+    {
+        int totalStars = Random.Range(minStars, maxStars + 1);
+        int totalJunks = Random.Range(minJunks, maxJunks + 1);
+
+        List<Polygon> availableAreas = new List<Polygon>(areas);
+
+        // Place stars
+        for (int i = 0; i < totalStars; i++)
+        {
+            if (availableAreas.Count == 0) break;
+
+            int areaIndex = Random.Range(0, availableAreas.Count);
+            Vector2 position = availableAreas[areaIndex].GetRandomPointInside();
+            GameObject star = Instantiate(starPrefab, position, Quaternion.identity);
+            stars.Add(star);
+
+            availableAreas.RemoveAt(areaIndex);
+        }
+
+        // Place cosmic junk
+        for (int i = 0; i < totalJunks; i++)
+        {
+            if (availableAreas.Count == 0) break;
+
+            int areaIndex = Random.Range(0, availableAreas.Count);
+            Vector2 position = availableAreas[areaIndex].GetRandomPointInside();
+            GameObject junk = Instantiate(junkPrefab, position, Quaternion.identity);
+            cosmicJunks.Add(junk);
+
+            availableAreas.RemoveAt(areaIndex);
+        }
+    }
+
+    public void OnRestartButtonClick()
+    {
+        GenerateLevel();
+    }
+
+    [Header("Difficulty Settings")]
+    public float difficultyMultiplier = 1.0f;
+    public int maxLines = 5;
+
+    private bool ValidateLevel()
+    {
+        // Check if all areas are properly formed
+        // Verify minimum requirements are met
+        return true;
+    }
+}
+
+public class Polygon
+{
+    private List<Vector2> vertices;
+
+    public Polygon(List<Vector2> points)
+    {
+        vertices = new List<Vector2>(points);
+    }
+
+    public Vector2 GetRandomPointInside()
+    {
+        Vector2 min = vertices.Aggregate((v1, v2) => Vector2.Min(v1, v2));
+        Vector2 max = vertices.Aggregate((v1, v2) => Vector2.Max(v1, v2));
+
+        while (true)
+        {
+            Vector2 point = new Vector2(
+                Random.Range(min.x, max.x),
+                Random.Range(min.y, max.y)
+            );
+            if (IsPointInside(point))
+                return point;
+        }
+    }
+
+    private bool IsPointInside(Vector2 point)
+    {
+        bool inside = false;
+        for (int i = 0, j = vertices.Count - 1; i < vertices.Count; j = i++)
+        {
+            if (((vertices[i].y > point.y) != (vertices[j].y > point.y)) &&
+                (point.x < (vertices[j].x - vertices[i].x) * (point.y - vertices[i].y) / (vertices[j].y - vertices[i].y) + vertices[i].x))
+            {
+                inside = !inside;
+            }
+        }
+        return inside;
     }
 }
