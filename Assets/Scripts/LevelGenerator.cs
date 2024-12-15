@@ -113,19 +113,57 @@ public class LevelGenerator : MonoBehaviour
             do
             {
                 validLine = true;
-                if (Random.value < 0.5f)
+                float lineType = Random.value;
+
+                if (lineType < 0.33f) // Вертикальная линия
                 {
-                    // Вертикальная линия
                     float x = Random.Range(-BOARD_WIDTH / 2 + 1f, BOARD_WIDTH / 2 - 1f);
                     startPoint = new Vector2(x, BOARD_HEIGHT / 2);
                     endPoint = new Vector2(x, -BOARD_HEIGHT / 2);
                 }
-                else
+                else if (lineType < 0.66f) // Горизонтальная линия
                 {
-                    // Горизонтальная линия
                     float y = Random.Range(-BOARD_HEIGHT / 2 + 1f, BOARD_HEIGHT / 2 - 1f);
                     startPoint = new Vector2(-BOARD_WIDTH / 2, y);
                     endPoint = new Vector2(BOARD_WIDTH / 2, y);
+                }
+                else // Диагональная линия
+                {
+                    // Выбираем случайную точку на одной из сторон поля
+                    int side = Random.Range(0, 4);
+                    switch (side)
+                    {
+                        case 0: // Верхняя сторона
+                            startPoint = new Vector2(Random.Range(-BOARD_WIDTH / 2, BOARD_WIDTH / 2), BOARD_HEIGHT / 2);
+                            break;
+                        case 1: // Правая сторона
+                            startPoint = new Vector2(BOARD_WIDTH / 2, Random.Range(-BOARD_HEIGHT / 2, BOARD_HEIGHT / 2));
+                            break;
+                        case 2: // Нижняя сторона
+                            startPoint = new Vector2(Random.Range(-BOARD_WIDTH / 2, BOARD_WIDTH / 2), -BOARD_HEIGHT / 2);
+                            break;
+                        default: // Левая сторона
+                            startPoint = new Vector2(-BOARD_WIDTH / 2, Random.Range(-BOARD_HEIGHT / 2, BOARD_HEIGHT / 2));
+                            break;
+                    }
+
+                    // Выбираем случайную точку на противоположной стороне
+                    int oppositeSide = (side + 2) % 4;
+                    switch (oppositeSide)
+                    {
+                        case 0: // Верхняя сторона
+                            endPoint = new Vector2(Random.Range(-BOARD_WIDTH / 2, BOARD_WIDTH / 2), BOARD_HEIGHT / 2);
+                            break;
+                        case 1: // Правая сторона
+                            endPoint = new Vector2(BOARD_WIDTH / 2, Random.Range(-BOARD_HEIGHT / 2, BOARD_HEIGHT / 2));
+                            break;
+                        case 2: // Нижняя сторона
+                            endPoint = new Vector2(Random.Range(-BOARD_WIDTH / 2, BOARD_WIDTH / 2), -BOARD_HEIGHT / 2);
+                            break;
+                        default: // Левая сторона
+                            endPoint = new Vector2(-BOARD_WIDTH / 2, Random.Range(-BOARD_HEIGHT / 2, BOARD_HEIGHT / 2));
+                            break;
+                    }
                 }
 
                 // Проверяем, не слишком ли близко к существующим линиям
