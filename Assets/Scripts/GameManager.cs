@@ -15,6 +15,8 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        Camera.main.orthographicSize = 8.9f;
+        Camera.main.transform.position = new Vector3(0, 0, -10);
         SetupCamera();
         InitializeManagers();
         ShowLevelSelect();
@@ -23,8 +25,6 @@ public class GameManager : MonoBehaviour
     private void SetupCamera()
     {
         Camera.main.orthographic = true;
-        Camera.main.orthographicSize = 6f;
-        Camera.main.transform.position = new Vector3(0, 0, -10);
     }
 
     private void InitializeManagers()

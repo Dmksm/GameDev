@@ -1,213 +1,225 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class Polygon
+public class Polygon : MonoBehaviour
 {
-    private List<Vector2> vertices;
-    private const float EPSILON = 0.0001f;
+    private List<Vector2> points = new List<Vector2>();
+    private ObjectType objectType;
 
-    public Polygon(List<Vector2> vertices)
+    public void SetPoints(List<Vector2> newPoints)
     {
-        if (vertices == null || vertices.Count < 3)
-            throw new System.ArgumentException("Polygon must have at least 3 vertices");
+        points = new List<Vector2>(newPoints);
+    }
 
-        this.vertices = vertices;
+    public List<Vector2> GetPoints()
+    {
+        return points;
+    }
+
+    public void SetObjectType(ObjectType type)
+    {
+        objectType = type;
+    }
+
+    public ObjectType GetObjectType()
+    {
+        return objectType;
+    }
+
+    public Vector2 GetCenter()
+    {
+        if (points == null || points.Count == 0)
+            return Vector2.zero;
+
+        Vector2 sum = Vector2.zero;
+        foreach (var point in points)
+        {
+            sum += point;
+        }
+        return sum / points.Count;
     }
 
     public Vector2 GetRandomPointInside()
     {
-        if (vertices.Count < 3)
-            return GetCenter();
+        if (points == null || points.Count < 3)
+            return Vector2.zero;
 
-        // Разбиваем полигон на треугольники
-        float totalArea = 0;
-        List<(Vector2, Vector2, Vector2)> triangles = new List<(Vector2, Vector2, Vector2)>();
-        Vector2 center = GetCenter();
+        float minX = float.MaxValue, minY = float.MaxValue;
+        float maxX = float.MinValue, maxY = float.MinValue;
 
-        for (int i = 0; i < vertices.Count; i++)
+        foreach (var point in points)
         {
-            Vector2 v1 = vertices[i];
-            Vector2 v2 = vertices[(i + 1) % vertices.Count];
-            triangles.Add((v1, v2, center));
-            totalArea += CalculateTriangleArea(v1, v2, center);
+            minX = Mathf.Min(minX, point.x);
+            minY = Mathf.Min(minY, point.y);
+            maxX = Mathf.Max(maxX, point.x);
+            maxY = Mathf.Max(maxY, point.y);
         }
 
-        // Выбираем случайный треугольник с учетом его площади
-        float randomArea = Random.Range(0f, totalArea);
-        float currentArea = 0;
-        
-        for (int i = 0; i < triangles.Count; i++)
-        {
-            currentArea += CalculateTriangleArea(triangles[i].Item1, triangles[i].Item2, triangles[i].Item3);
-            if (currentArea >= randomArea)
-            {
-                // Генерируем случайную точку внутри выбранного треугольника
-                float r1 = Mathf.Sqrt(Random.Range(0f, 1f));
-                float r2 = Random.Range(0f, 1f);
-                
-                float a = 1 - r1;
-                float b = r1 * (1 - r2);
-                float c = r1 * r2;
+        int maxAttempts = 100;
+        int attempts = 0;
 
-                return a * triangles[i].Item1 + b * triangles[i].Item2 + c * triangles[i].Item3;
+        while (attempts < maxAttempts)
+        {
+            Vector2 randomPoint = new Vector2(
+                Random.Range(minX, maxX),
+                Random.Range(minY, maxY)
+            );
+
+            if (IsPointInside(randomPoint))
+            {
+                return randomPoint;
             }
+
+            attempts++;
         }
 
         return GetCenter();
     }
 
-    private float CalculateTriangleArea(Vector2 a, Vector2 b, Vector2 c)
+    private bool IsPointInside(Vector2 point)
     {
-        return Mathf.Abs((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y)) / 2f;
-    }
+        bool inside = false;
+        int j = points.Count - 1;
 
-    public Vector2 GetCenter()
-    {
-        if (vertices == null || vertices.Count == 0)
-            return Vector2.zero;
-
-        Vector2 center = Vector2.zero;
-        foreach (var vertex in vertices)
+        for (int i = 0; i < points.Count; i++)
         {
-            center += vertex;
+            if (((points[i].y > point.y) != (points[j].y > point.y)) &&
+                (point.x < (points[j].x - points[i].x) * (point.y - points[i].y) / (points[j].y - points[i].y) + points[i].x))
+            {
+                inside = !inside;
+            }
+            j = i;
         }
-        return center / vertices.Count;
+
+        return inside;
     }
 
-    public List<Polygon> SplitByLine(Vector3 lineStart, Vector3 lineEnd)
+    public List<Polygon> SplitByLine(Vector2 lineStart, Vector2 lineEnd)
     {
-        if (vertices.Count < 3)
-            return new List<Polygon> { this };
-
         List<Vector2> intersectionPoints = new List<Vector2>();
         List<int> intersectionIndices = new List<int>();
 
         // Находим точки пересечения
-        for (int i = 0; i < vertices.Count; i++)
+        for (int i = 0; i < points.Count; i++)
         {
-            Vector2 start = vertices[i];
-            Vector2 end = vertices[(i + 1) % vertices.Count];
+            Vector2 p1 = points[i];
+            Vector2 p2 = points[(i + 1) % points.Count];
 
-            Vector2 intersection;
-            if (LineIntersection((Vector2)lineStart, (Vector2)lineEnd, start, end, out intersection))
+            if (LineSegmentsIntersect(lineStart, lineEnd, p1, p2, out Vector2 intersection))
             {
-                // Проверяем, не добавили ли мы уже эту точку
-                bool isDuplicate = false;
-                foreach (var point in intersectionPoints)
-                {
-                    if (Vector2.Distance(point, intersection) < EPSILON)
-                    {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
-
-                if (!isDuplicate)
-                {
-                    intersectionPoints.Add(intersection);
-                    intersectionIndices.Add(i);
-                }
+                intersectionPoints.Add(intersection);
+                intersectionIndices.Add(i);
             }
         }
 
-        // Если нет пересечений или только одно, возвращаем исходный полигон
-        if (intersectionPoints.Count < 2)
+        // Если нет двух точек пересечения, возвращаем исходный полигон
+        if (intersectionPoints.Count != 2)
         {
             return new List<Polygon> { this };
         }
 
-        // Создаем два новых полигона
+        // Создаем два новых списка точек для полигонов
         List<Vector2> polygon1Points = new List<Vector2>();
         List<Vector2> polygon2Points = new List<Vector2>();
 
-        // Сортируем точки пересечения по расстоянию от начала линии
-        for (int i = 0; i < intersectionPoints.Count - 1; i++)
+        // Добавляем первую точку пересечения в оба полигона
+        polygon1Points.Add(intersectionPoints[0]);
+        polygon2Points.Add(intersectionPoints[0]);
+
+        // Проходим по точкам от первой точки пересечения до второй
+        int startIdx = (intersectionIndices[0] + 1) % points.Count;
+        int endIdx = intersectionIndices[1];
+
+        if (startIdx <= endIdx)
         {
-            for (int j = i + 1; j < intersectionPoints.Count; j++)
+            for (int i = startIdx; i <= endIdx; i++)
             {
-                float dist1 = Vector2.Distance((Vector2)lineStart, intersectionPoints[i]);
-                float dist2 = Vector2.Distance((Vector2)lineStart, intersectionPoints[j]);
-                if (dist2 < dist1)
-                {
-                    var tempPoint = intersectionPoints[i];
-                    var tempIndex = intersectionIndices[i];
-                    intersectionPoints[i] = intersectionPoints[j];
-                    intersectionIndices[i] = intersectionIndices[j];
-                    intersectionPoints[j] = tempPoint;
-                    intersectionIndices[j] = tempIndex;
-                }
+                polygon1Points.Add(points[i]);
+            }
+        }
+        else
+        {
+            for (int i = startIdx; i < points.Count; i++)
+            {
+                polygon1Points.Add(points[i]);
+            }
+            for (int i = 0; i <= endIdx; i++)
+            {
+                polygon1Points.Add(points[i]);
             }
         }
 
-        // Добавляем точки для первого полигона
-        polygon1Points.Add(intersectionPoints[0]);
-        int currentIndex = intersectionIndices[0];
-        do
-        {
-            currentIndex = (currentIndex + 1) % vertices.Count;
-            polygon1Points.Add(vertices[currentIndex]);
-        }
-        while (currentIndex != intersectionIndices[1]);
+        // Добавляем вторую точку пересечения
         polygon1Points.Add(intersectionPoints[1]);
-
-        // Добавляем точки для второго полигона
         polygon2Points.Add(intersectionPoints[1]);
-        currentIndex = intersectionIndices[1];
-        do
-        {
-            currentIndex = (currentIndex + 1) % vertices.Count;
-            polygon2Points.Add(vertices[currentIndex]);
-        }
-        while (currentIndex != intersectionIndices[0]);
-        polygon2Points.Add(intersectionPoints[0]);
 
-        return new List<Polygon> {
-            new Polygon(polygon1Points),
-            new Polygon(polygon2Points)
-        };
+        // Проходим по оставшимся точкам для второго полигона
+        startIdx = (intersectionIndices[1] + 1) % points.Count;
+        endIdx = intersectionIndices[0];
+
+        if (startIdx <= endIdx)
+        {
+            for (int i = startIdx; i <= endIdx; i++)
+            {
+                polygon2Points.Add(points[i]);
+            }
+        }
+        else
+        {
+            for (int i = startIdx; i < points.Count; i++)
+            {
+                polygon2Points.Add(points[i]);
+            }
+            for (int i = 0; i <= endIdx; i++)
+            {
+                polygon2Points.Add(points[i]);
+            }
+        }
+
+        // Создаем новые полигоны
+        List<Polygon> result = new List<Polygon>();
+
+        if (polygon1Points.Count >= 3)
+        {
+            GameObject newPolygon1 = new GameObject("Polygon1");
+            newPolygon1.transform.SetParent(transform.parent);
+            Polygon poly1 = newPolygon1.AddComponent<Polygon>();
+            poly1.SetPoints(polygon1Points);
+            result.Add(poly1);
+        }
+
+        if (polygon2Points.Count >= 3)
+        {
+            GameObject newPolygon2 = new GameObject("Polygon2");
+            newPolygon2.transform.SetParent(transform.parent);
+            Polygon poly2 = newPolygon2.AddComponent<Polygon>();
+            poly2.SetPoints(polygon2Points);
+            result.Add(poly2);
+        }
+
+        return result;
     }
 
-    private bool LineIntersection(Vector2 line1Start, Vector2 line1End, Vector2 line2Start, Vector2 line2End, out Vector2 intersection)
+    private bool LineSegmentsIntersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, out Vector2 intersection)
     {
         intersection = Vector2.zero;
 
-        float denominator = (line2End.y - line2Start.y) * (line1End.x - line1Start.x) -
-                          (line2End.x - line2Start.x) * (line1End.y - line1Start.y);
+        float denominator = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
 
-        if (Mathf.Abs(denominator) < EPSILON)
+        if (denominator == 0)
             return false;
 
-        float ua = ((line2End.x - line2Start.x) * (line1Start.y - line2Start.y) -
-                   (line2End.y - line2Start.y) * (line1Start.x - line2Start.x)) / denominator;
-        float ub = ((line1End.x - line1Start.x) * (line1Start.y - line2Start.y) -
-                   (line1End.y - line1Start.y) * (line1Start.x - line2Start.x)) / denominator;
+        float ua = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / denominator;
+        float ub = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / denominator;
 
         if (ua < 0 || ua > 1 || ub < 0 || ub > 1)
             return false;
 
         intersection = new Vector2(
-            line1Start.x + ua * (line1End.x - line1Start.x),
-            line1Start.y + ua * (line1End.y - line1Start.y)
+            p1.x + ua * (p2.x - p1.x),
+            p1.y + ua * (p2.y - p1.y)
         );
 
         return true;
-    }
-
-    public bool Contains(Vector2 point)
-    {
-        if (vertices.Count < 3)
-            return false;
-
-        bool inside = false;
-        for (int i = 0, j = vertices.Count - 1; i < vertices.Count; j = i++)
-        {
-            if (((vertices[i].y > point.y) != (vertices[j].y > point.y)) &&
-                (point.x < (vertices[j].x - vertices[i].x) * (point.y - vertices[i].y) /
-                          (vertices[j].y - vertices[i].y) + vertices[i].x))
-            {
-                inside = !inside;
-            }
-        }
-        return inside;
     }
 }

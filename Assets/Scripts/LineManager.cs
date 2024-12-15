@@ -14,6 +14,7 @@ public class LineManager : MonoBehaviour
 
     private Material normalLineMaterial;
     private const float BOARD_SIZE = 100f;
+    private int maxLines = 4;
 
     public void Initialize(GameManager gameManager, BoardManager boardManager)
     {
@@ -175,5 +176,15 @@ public class LineManager : MonoBehaviour
         Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, -mainCamera.transform.position.z));
         worldPosition.z = 0;
         return worldPosition;
+    }
+
+    public int GetAvailableLines()
+    {
+        return maxLines - drawnLines.Count;
+    }
+
+    public void SetMaxLines(int count)
+    {
+        maxLines = count;
     }
 }

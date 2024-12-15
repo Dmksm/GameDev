@@ -1,15 +1,33 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
+
+public enum ObjectType
+{
+    Star,
+    Junk
+}
 
 public class LevelGenerator : MonoBehaviour
 {
     private const float BOARD_WIDTH = 8f;
     private const float BOARD_HEIGHT = 12f;
+    private const float CAMERA_HEIGHT = 12f; // Увеличиваем высоту камеры
+    private const float CAMERA_WIDTH = 8f; // Ширина камеры в Unity units
     private const float MIN_OBJECT_SPACING = 1f;
+    private const float OBJECT_RADIUS = 0.2f; // Единый размер для всех объектов
+    private const float SAFE_MARGIN = 0.3f; // Отступ от краев экрана
 
     private List<GameObject> stars = new List<GameObject>();
     private List<GameObject> junks = new List<GameObject>();
     private GameObject board;
+    private List<Polygon> segments = new List<Polygon>();
+    private LineManager lineManager;
+
+    private void Start()
+    {
+        lineManager = FindObjectOfType<LineManager>();
+    }
 
     public void Initialize()
     {
@@ -20,7 +38,7 @@ public class LevelGenerator : MonoBehaviour
     {
         board = GameObject.CreatePrimitive(PrimitiveType.Quad);
         board.transform.SetParent(transform);
-        board.transform.localScale = new Vector3(BOARD_WIDTH, BOARD_HEIGHT, 1);
+        board.transform.localScale = new Vector3(CAMERA_WIDTH, CAMERA_HEIGHT, 1);
         board.transform.position = new Vector3(0, 0, 1);
         
         Material material = new Material(Shader.Find("Sprites/Default"));
@@ -32,92 +50,331 @@ public class LevelGenerator : MonoBehaviour
     {
         ClearLevel();
 
-        // Calculate number of objects based on level
-        int numStars = CalculateStars(level);
-        int numJunks = CalculateJunks(level);
-
-        // Create list for all positions
-        List<Vector2> positions = new List<Vector2>();
-        
-        // Generate random positions for all objects
-        for (int i = 0; i < numStars + numJunks; i++)
+        // Создаем начальный полигон (все игровое поле)
+        List<Vector2> boardVertices = new List<Vector2>
         {
-            Vector2 newPos;
-            bool validPosition;
-            int attempts = 0;
-            const int MAX_ATTEMPTS = 100;
+            new Vector2(-CAMERA_WIDTH/2, -CAMERA_HEIGHT/2),
+            new Vector2(CAMERA_WIDTH/2, -CAMERA_HEIGHT/2),
+            new Vector2(CAMERA_WIDTH/2, CAMERA_HEIGHT/2),
+            new Vector2(-CAMERA_WIDTH/2, CAMERA_HEIGHT/2)
+        };
 
-            do
+        GameObject initialPolygon = new GameObject("Initial Polygon");
+        initialPolygon.transform.SetParent(transform);
+        Polygon poly = initialPolygon.AddComponent<Polygon>();
+        poly.SetPoints(boardVertices);
+        segments.Add(poly);
+
+        // Получаем количество доступных линий из LineManager
+        int availableLines = lineManager.GetAvailableLines();
+        
+        // Генерируем линии для разделения поля
+        List<(Vector2, Vector2)> divisionLines = GenerateDivisionLines(availableLines);
+        
+        // Разделяем поле на сегменты
+        SplitPolygonsWithLines(divisionLines);
+
+        // Распределяем типы объектов по сегментам
+        AssignObjectTypesToSegments();
+
+        // Заполняем сегменты объектами
+        FillSegmentsWithObjects();
+    }
+
+    private List<(Vector2, Vector2)> GenerateDivisionLines(int count)
+    {
+        List<(Vector2, Vector2)> lines = new List<(Vector2, Vector2)>();
+        
+        for (int i = 0; i < count; i++)
+        {
+            bool isHorizontal = Random.value > 0.5f;
+            Vector2 start, end;
+
+            if (isHorizontal)
             {
-                validPosition = true;
-                newPos = new Vector2(
-                    Random.Range(-BOARD_WIDTH/2 + 1, BOARD_WIDTH/2 - 1),
-                    Random.Range(-BOARD_HEIGHT/2 + 1, BOARD_HEIGHT/2 - 1)
-                );
+                float y = Random.Range(-CAMERA_HEIGHT/2 + 1, CAMERA_HEIGHT/2 - 1);
+                start = new Vector2(-CAMERA_WIDTH/2, y);
+                end = new Vector2(CAMERA_WIDTH/2, y);
+            }
+            else
+            {
+                float x = Random.Range(-CAMERA_WIDTH/2 + 1, CAMERA_WIDTH/2 - 1);
+                start = new Vector2(x, -CAMERA_HEIGHT/2);
+                end = new Vector2(x, CAMERA_HEIGHT/2);
+            }
 
-                // Check distance to all existing positions
-                foreach (var pos in positions)
+            lines.Add((start, end));
+        }
+
+        return lines;
+    }
+
+    private void SplitPolygonsWithLines(List<(Vector2, Vector2)> lines)
+    {
+        foreach (var line in lines)
+        {
+            List<Polygon> newSegments = new List<Polygon>();
+            
+            foreach (var segment in segments.ToList())
+            {
+                var splitResult = segment.SplitByLine(line.Item1, line.Item2);
+                if (splitResult.Count > 1)
                 {
-                    if (Vector2.Distance(pos, newPos) < MIN_OBJECT_SPACING)
+                    newSegments.AddRange(splitResult);
+                    segments.Remove(segment);
+                    Destroy(segment.gameObject);
+                }
+                else
+                {
+                    newSegments.Add(segment);
+                }
+            }
+
+            segments = newSegments;
+        }
+    }
+
+    private bool AreSegmentsAdjacent(Polygon a, Polygon b)
+    {
+        // Проверяем, есть ли общие точки у полигонов
+        var pointsA = a.GetPoints();
+        var pointsB = b.GetPoints();
+
+        foreach (var pointA in pointsA)
+        {
+            foreach (var pointB in pointsB)
+            {
+                if (Vector2.Distance(pointA, pointB) < 0.1f)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void AssignObjectTypesToSegments()
+    {
+        if (segments.Count == 0) return;
+
+        // Очищаем предыдущие назначения
+        foreach (var segment in segments)
+        {
+            segment.SetObjectType(ObjectType.Star); // По умолчанию все звезды
+        }
+
+        // Создаем список необработанных сегментов
+        List<Polygon> unassignedSegments = new List<Polygon>(segments);
+        List<Polygon> junkSegments = new List<Polygon>();
+        List<Polygon> starSegments = new List<Polygon>();
+
+        // Начинаем с первого сегмента
+        var firstSegment = unassignedSegments[0];
+        unassignedSegments.RemoveAt(0);
+        starSegments.Add(firstSegment);
+
+        while (unassignedSegments.Count > 0)
+        {
+            // Находим сегмент, который граничит с уже обработанными
+            Polygon nextSegment = null;
+            ObjectType nextType = ObjectType.Star;
+            
+            foreach (var segment in unassignedSegments)
+            {
+                bool adjacentToStar = false;
+                bool adjacentToJunk = false;
+
+                // Проверяем соседство со звездными сегментами
+                foreach (var starSegment in starSegments)
+                {
+                    if (AreSegmentsAdjacent(segment, starSegment))
                     {
-                        validPosition = false;
+                        adjacentToStar = true;
                         break;
                     }
                 }
 
-                attempts++;
-                if (attempts >= MAX_ATTEMPTS)
+                // Проверяем соседство с мусорными сегментами
+                foreach (var junkSegment in junkSegments)
                 {
-                    Debug.LogWarning("Could not find suitable position after " + MAX_ATTEMPTS + " attempts");
+                    if (AreSegmentsAdjacent(segment, junkSegment))
+                    {
+                        adjacentToJunk = true;
+                        break;
+                    }
+                }
+
+                // Если сегмент граничит с уже обработанным
+                if (adjacentToStar || adjacentToJunk)
+                {
+                    nextSegment = segment;
+                    
+                    // Если граничит со звездами, делаем его мусором
+                    if (adjacentToStar && !adjacentToJunk)
+                    {
+                        nextType = ObjectType.Junk;
+                    }
+                    // Если граничит с мусором, делаем его звездами
+                    else if (!adjacentToStar && adjacentToJunk)
+                    {
+                        nextType = ObjectType.Star;
+                    }
+                    // Если граничит с обоими типами или ни с одним,
+                    // выбираем тип, которого меньше
+                    else
+                    {
+                        nextType = starSegments.Count <= junkSegments.Count ? ObjectType.Star : ObjectType.Junk;
+                    }
                     break;
                 }
             }
-            while (!validPosition);
 
-            positions.Add(newPos);
-        }
-
-        // Create stars
-        for (int i = 0; i < numStars; i++)
-        {
-            if (i < positions.Count)
+            // Если не нашли граничащий сегмент, берем первый попавшийся
+            if (nextSegment == null && unassignedSegments.Count > 0)
             {
-                GameObject star = CreateStar(positions[i]);
-                stars.Add(star);
+                nextSegment = unassignedSegments[0];
+                nextType = starSegments.Count <= junkSegments.Count ? ObjectType.Star : ObjectType.Junk;
+            }
+
+            if (nextSegment != null)
+            {
+                unassignedSegments.Remove(nextSegment);
+                nextSegment.SetObjectType(nextType);
+                
+                if (nextType == ObjectType.Star)
+                    starSegments.Add(nextSegment);
+                else
+                    junkSegments.Add(nextSegment);
             }
         }
 
-        // Create junks
-        for (int i = 0; i < numJunks; i++)
+        // Проверяем, есть ли хотя бы один сегмент каждого типа
+        if (starSegments.Count == 0 && junkSegments.Count > 0)
         {
-            if (i + numStars < positions.Count)
+            var segment = junkSegments[0];
+            segment.SetObjectType(ObjectType.Star);
+            starSegments.Add(segment);
+            junkSegments.RemoveAt(0);
+        }
+        else if (junkSegments.Count == 0 && starSegments.Count > 0)
+        {
+            var segment = starSegments[0];
+            segment.SetObjectType(ObjectType.Junk);
+            junkSegments.Add(segment);
+            starSegments.RemoveAt(0);
+        }
+    }
+
+    private bool IsPositionInsideBounds(Vector2 position)
+    {
+        float margin = SAFE_MARGIN + OBJECT_RADIUS;
+        float maxX = CAMERA_WIDTH/2 - margin;
+        float maxY = CAMERA_HEIGHT/2 - margin;
+        
+        return position.x >= -maxX && 
+               position.x <= maxX && 
+               position.y >= -maxY && 
+               position.y <= maxY;
+    }
+
+    private void FillSegmentsWithObjects(int maxAttempts = 100)
+    {
+        float objectSpacing = MIN_OBJECT_SPACING * 1.2f;
+
+        foreach (var segment in segments)
+        {
+            float segmentArea = CalculatePolygonArea(segment.GetPoints());
+            int maxObjects = Mathf.Max(1, Mathf.FloorToInt(segmentArea / (objectSpacing * objectSpacing * 4)));
+
+            List<Vector2> placedPositions = new List<Vector2>();
+
+            for (int i = 0; i < maxObjects; i++)
             {
-                GameObject junk = CreateJunk(positions[i + numStars]);
-                junks.Add(junk);
+                int attempts = 0;
+                bool positionFound = false;
+                Vector2 position = Vector2.zero;
+
+                while (!positionFound && attempts < maxAttempts)
+                {
+                    position = segment.GetRandomPointInside();
+                    
+                    if (!IsPositionInsideBounds(position))
+                    {
+                        attempts++;
+                        continue;
+                    }
+
+                    bool isTooClose = false;
+                    foreach (var placedPos in placedPositions)
+                    {
+                        if (Vector2.Distance(position, placedPos) < objectSpacing)
+                        {
+                            isTooClose = true;
+                            break;
+                        }
+                    }
+
+                    if (!isTooClose)
+                    {
+                        foreach (var star in stars)
+                        {
+                            if (Vector2.Distance(position, star.transform.position) < objectSpacing)
+                            {
+                                isTooClose = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!isTooClose)
+                    {
+                        foreach (var junk in junks)
+                        {
+                            if (Vector2.Distance(position, junk.transform.position) < objectSpacing)
+                            {
+                                isTooClose = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    positionFound = !isTooClose;
+                    attempts++;
+                }
+
+                if (positionFound)
+                {
+                    placedPositions.Add(position);
+                    GameObject obj;
+                    if (segment.GetObjectType() == ObjectType.Star)
+                    {
+                        obj = CreateStar(position);
+                        obj.transform.localScale = Vector3.one * (OBJECT_RADIUS * 2);
+                        stars.Add(obj);
+                    }
+                    else
+                    {
+                        obj = CreateJunk(position);
+                        obj.transform.localScale = Vector3.one * (OBJECT_RADIUS * 2);
+                        junks.Add(obj);
+                    }
+                }
             }
         }
     }
 
-    private int CalculateStars(int level)
+    private float CalculatePolygonArea(List<Vector2> points)
     {
-        // Progressive star calculation for 100 levels
-        // Start with 1 star, gradually increase
-        // Level 1: 1 star
-        // Level 20: ~4 stars
-        // Level 50: ~8 stars
-        // Level 100: ~15 stars
-        return Mathf.Max(1, Mathf.FloorToInt(1 + (level * 0.14f)));
-    }
-
-    private int CalculateJunks(int level)
-    {
-        // Progressive junk calculation for 100 levels
-        // More aggressive scaling than stars
-        // Level 1: 2 junks
-        // Level 20: ~8 junks
-        // Level 50: ~15 junks
-        // Level 100: ~25 junks
-        return Mathf.Max(2, Mathf.FloorToInt(2 + (level * 0.23f)));
+        float area = 0;
+        int j = points.Count - 1;
+        
+        for (int i = 0; i < points.Count; i++)
+        {
+            area += (points[j].x + points[i].x) * (points[j].y - points[i].y);
+            j = i;
+        }
+        
+        return Mathf.Abs(area / 2);
     }
 
     private GameObject CreateStar(Vector2 position)
@@ -125,7 +382,6 @@ public class LevelGenerator : MonoBehaviour
         GameObject star = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         star.transform.SetParent(transform);
         star.transform.position = new Vector3(position.x, position.y, 0);
-        star.transform.localScale = Vector3.one * 0.5f;
 
         star.AddComponent<CircleCollider2D>();
         
@@ -141,7 +397,6 @@ public class LevelGenerator : MonoBehaviour
         GameObject junk = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         junk.transform.SetParent(transform);
         junk.transform.position = new Vector3(position.x, position.y, 0);
-        junk.transform.localScale = Vector3.one * 0.3f;
 
         junk.AddComponent<CircleCollider2D>();
         
@@ -171,6 +426,15 @@ public class LevelGenerator : MonoBehaviour
             }
         }
         junks.Clear();
+        
+        foreach (var segment in segments)
+        {
+            if (segment != null)
+            {
+                Destroy(segment.gameObject);
+            }
+        }
+        segments.Clear();
     }
 
     public List<GameObject> GetStars()
