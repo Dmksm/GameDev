@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -381,6 +382,7 @@ public class LevelGenerator : MonoBehaviour
     private void FillSegmentsWithObjects(int maxAttempts = 100)
     {
         float objectSpacing = MIN_OBJECT_SPACING * 1.2f;
+        float minDistanceFromLine = OBJECT_RADIUS + 0.2f; // Minimum distance from dividing lines
 
         foreach (var segment in segments)
         {
@@ -406,12 +408,32 @@ public class LevelGenerator : MonoBehaviour
                     }
 
                     bool isTooClose = false;
-                    foreach (var placedPos in placedPositions)
+
+                    // Check distance from segment edges (dividing lines)
+                    var points = segment.GetPoints();
+                    for (int j = 0; j < points.Count; j++)
                     {
-                        if (Vector2.Distance(position, placedPos) < objectSpacing)
+                        int nextIndex = (j + 1) % points.Count;
+                        Vector2 start = points[j];
+                        Vector2 end = points[nextIndex];
+                        
+                        float distanceToLine = HandleUtility.DistancePointLine(position, start, end);
+                        if (distanceToLine < minDistanceFromLine)
                         {
                             isTooClose = true;
                             break;
+                        }
+                    }
+
+                    if (!isTooClose)
+                    {
+                        foreach (var placedPos in placedPositions)
+                        {
+                            if (Vector2.Distance(position, placedPos) < objectSpacing)
+                            {
+                                isTooClose = true;
+                                break;
+                            }
                         }
                     }
 
