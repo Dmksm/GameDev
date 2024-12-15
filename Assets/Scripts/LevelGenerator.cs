@@ -32,14 +32,14 @@ public class LevelGenerator : MonoBehaviour
     {
         ClearLevel();
 
-        // Определяем количество объектов для уровня
-        int numStars = Mathf.Min(1 + level / 2, 3); // От 1 до 3 звезд
-        int numJunks = Mathf.Min(2 + level / 2, 4); // От 2 до 4 мусора
+        // Calculate number of objects based on level
+        int numStars = CalculateStars(level);
+        int numJunks = CalculateJunks(level);
 
-        // Создаем список всех позиций
+        // Create list for all positions
         List<Vector2> positions = new List<Vector2>();
         
-        // Генерируем случайные позиции для всех объектов
+        // Generate random positions for all objects
         for (int i = 0; i < numStars + numJunks; i++)
         {
             Vector2 newPos;
@@ -55,7 +55,7 @@ public class LevelGenerator : MonoBehaviour
                     Random.Range(-BOARD_HEIGHT/2 + 1, BOARD_HEIGHT/2 - 1)
                 );
 
-                // Проверяем расстояние до всех существующих позиций
+                // Check distance to all existing positions
                 foreach (var pos in positions)
                 {
                     if (Vector2.Distance(pos, newPos) < MIN_OBJECT_SPACING)
@@ -68,7 +68,7 @@ public class LevelGenerator : MonoBehaviour
                 attempts++;
                 if (attempts >= MAX_ATTEMPTS)
                 {
-                    Debug.LogWarning("Не удалось найти подходящую позицию после " + MAX_ATTEMPTS + " попыток");
+                    Debug.LogWarning("Could not find suitable position after " + MAX_ATTEMPTS + " attempts");
                     break;
                 }
             }
@@ -77,7 +77,7 @@ public class LevelGenerator : MonoBehaviour
             positions.Add(newPos);
         }
 
-        // Создаем звезды
+        // Create stars
         for (int i = 0; i < numStars; i++)
         {
             if (i < positions.Count)
@@ -87,7 +87,7 @@ public class LevelGenerator : MonoBehaviour
             }
         }
 
-        // Создаем мусор
+        // Create junks
         for (int i = 0; i < numJunks; i++)
         {
             if (i + numStars < positions.Count)
@@ -96,6 +96,28 @@ public class LevelGenerator : MonoBehaviour
                 junks.Add(junk);
             }
         }
+    }
+
+    private int CalculateStars(int level)
+    {
+        // Progressive star calculation for 100 levels
+        // Start with 1 star, gradually increase
+        // Level 1: 1 star
+        // Level 20: ~4 stars
+        // Level 50: ~8 stars
+        // Level 100: ~15 stars
+        return Mathf.Max(1, Mathf.FloorToInt(1 + (level * 0.14f)));
+    }
+
+    private int CalculateJunks(int level)
+    {
+        // Progressive junk calculation for 100 levels
+        // More aggressive scaling than stars
+        // Level 1: 2 junks
+        // Level 20: ~8 junks
+        // Level 50: ~15 junks
+        // Level 100: ~25 junks
+        return Mathf.Max(2, Mathf.FloorToInt(2 + (level * 0.23f)));
     }
 
     private GameObject CreateStar(Vector2 position)

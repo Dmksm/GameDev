@@ -97,11 +97,25 @@ public class GameManager : MonoBehaviour
     {
         currentLevel = level;
         isInfiniteMode = false;
-        remainingLines = 3 + level; // Увеличиваем количество линий с уровнем
+        // Calculate lines based on level complexity
+        remainingLines = CalculateRemainingLines(level);
         
         ResetLevel();
         uiManager.HideAllScreens();
         uiManager.UpdateLinesCounter(remainingLines);
+    }
+
+    private int CalculateRemainingLines(int level)
+    {
+        // Progressive line calculation for 100 levels
+        // Base lines start at 3
+        // Level 1: 3 lines
+        // Level 20: ~8 lines
+        // Level 50: ~12 lines
+        // Level 100: ~18 lines
+        float baseLines = 3;
+        float progression = level * 0.15f; // Slower progression than objects
+        return Mathf.Max(3, Mathf.FloorToInt(baseLines + progression));
     }
 
     public void StartInfiniteMode()
