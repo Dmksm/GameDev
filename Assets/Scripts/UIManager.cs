@@ -7,6 +7,8 @@ public class UIManager : MonoBehaviour
 {
     private GameManager gameManager;
     private TextMeshProUGUI linesCounterText;
+    private TextMeshProUGUI levelCounterText;
+    private Button hintButton;
     private GameObject winPanel;
     private GameObject losePanel;
     private GameObject levelSelectPanel;
@@ -35,13 +37,21 @@ public class UIManager : MonoBehaviour
 
     private void CreateUI()
     {
+        // Setup canvas
+        GameObject canvasObj = new GameObject("Canvas");
+        Canvas canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasObj.AddComponent<CanvasScaler>();
+        canvasObj.AddComponent<GraphicRaycaster>();
+        canvas.transform.SetParent(transform);
+
         // Get the canvas from GameManager
-        Canvas canvas = GameObject.FindObjectOfType<Canvas>();
-        if (canvas == null)
-        {
-            Debug.LogError("Canvas not found!");
-            return;
-        }
+        //Canvas canvas = GameObject.FindObjectOfType<Canvas>();
+        //if (canvas == null)
+        //{
+        //    Debug.LogError("Canvas not found!");
+        //    return;
+        //}
 
         // Create panels
         winPanel = CreatePanel("Win Panel", canvas.transform);
@@ -49,9 +59,9 @@ public class UIManager : MonoBehaviour
         levelSelectPanel = CreatePanel("Level Select Panel", canvas.transform);
 
         // Setup lines counter
-        GameObject counterObj = new GameObject("Lines Counter");
-        counterObj.transform.SetParent(canvas.transform, false);
-        linesCounterText = counterObj.AddComponent<TextMeshProUGUI>();
+        GameObject linesCounter = new GameObject("Lines Counter");
+        linesCounter.transform.SetParent(canvas.transform, false);
+        linesCounterText = linesCounter.AddComponent<TextMeshProUGUI>();
         linesCounterText.fontSize = 36;
         linesCounterText.alignment = TextAlignmentOptions.Left;
         linesCounterText.color = Color.black;
@@ -61,6 +71,62 @@ public class UIManager : MonoBehaviour
         counterRect.pivot = new Vector2(0, 1);
         counterRect.sizeDelta = new Vector2(200, 50);
         counterRect.anchoredPosition = new Vector2(20, -20);
+
+        // Setup hint button
+        GameObject hintObj = new GameObject("Hint Button");
+        hintObj.transform.SetParent(canvas.transform, false);
+        hintButton = hintObj.AddComponent<Button>();
+        
+        // Добавляем изображение для кнопки
+        Image buttonImage = hintObj.AddComponent<Image>();
+        buttonImage.color = new Color(0.8f, 0.8f, 0.8f, 1f);
+        
+        // Добавляем текст на кнопку
+        GameObject buttonTextObj = new GameObject("Button Text");
+        buttonTextObj.transform.SetParent(hintObj.transform);
+        TextMeshProUGUI buttonText = buttonTextObj.AddComponent<TextMeshProUGUI>();
+        buttonText.text = "Show Hint";
+        buttonText.fontSize = 24;
+        buttonText.alignment = TextAlignmentOptions.Center;
+        buttonText.color = Color.black;
+        
+        // Настраиваем позицию кнопки
+        RectTransform hintRect = hintObj.GetComponent<RectTransform>();
+        hintRect.anchorMin = new Vector2(0.5f, 1);
+        hintRect.anchorMax = new Vector2(0.5f, 1);
+        hintRect.pivot = new Vector2(0.5f, 1);
+        hintRect.sizeDelta = new Vector2(120, 40);
+        hintRect.anchoredPosition = new Vector2(0, -20);
+        
+        // Настраиваем позицию текста кнопки
+        RectTransform textRect = buttonTextObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+        textRect.anchoredPosition = Vector2.zero;
+        
+        // Добавляем обработчик нажатия
+        hintButton.onClick.AddListener(() => {
+            if (gameManager != null)
+            {
+                gameManager.ToggleHint();
+                buttonText.text = buttonText.text == "Show Hint" ? "Hide Hint" : "Show Hint";
+            }
+        });
+
+        // Setup level counter
+        GameObject levelCounterObj = new GameObject("Level Counter");
+        levelCounterObj.transform.SetParent(canvas.transform, false);
+        levelCounterText = levelCounterObj.AddComponent<TextMeshProUGUI>();
+        levelCounterText.fontSize = 36;
+        levelCounterText.alignment = TextAlignmentOptions.Right;
+        levelCounterText.color = Color.black;
+        RectTransform levelRect = levelCounterText.GetComponent<RectTransform>();
+        levelRect.anchorMin = new Vector2(1, 1);
+        levelRect.anchorMax = new Vector2(1, 1);
+        levelRect.pivot = new Vector2(1, 1);
+        levelRect.sizeDelta = new Vector2(200, 50);
+        levelRect.anchoredPosition = new Vector2(-20, -20);
 
         // Setup win panel
         CreatePanelContent(winPanel, "Level Complete!", "Next Level", "Level Select", () =>
@@ -84,45 +150,115 @@ public class UIManager : MonoBehaviour
         SetupLevelSelectPanel();
     }
 
+    public void UpdateUI()
+    {
+        if (gameManager != null)
+        {
+            linesCounterText.text = $"Lines: {gameManager.GetRemainingLines()}";
+            
+            // Обновляем отображение уровня в бесконечном режиме
+            if (gameManager.IsInInfiniteMode())
+            {
+                levelCounterText.text = $"Level: {gameManager.GetCurrentLevel()}";
+                levelCounterText.gameObject.SetActive(true);
+            }
+            else
+            {
+                levelCounterText.gameObject.SetActive(false);
+            }
+        }
+    }
+
     private GameObject CreatePanel(string name, Transform parent)
     {
         GameObject panel = new GameObject(name);
         panel.transform.SetParent(parent, false);
-
+        
         RectTransform rectTransform = panel.AddComponent<RectTransform>();
-        rectTransform.anchorMin = Vector2.zero;
-        rectTransform.anchorMax = Vector2.one;
+        rectTransform.anchorMin = new Vector2(0.2f, 0.2f);
+        rectTransform.anchorMax = new Vector2(0.8f, 0.8f);
         rectTransform.sizeDelta = Vector2.zero;
-
-        Image image = panel.AddComponent<Image>();
-        image.color = new Color(0, 0, 0, 0.9f);
-
+        
         panel.SetActive(false);
         return panel;
     }
 
-    private void CreatePanelContent(GameObject panel, string titleText, string button1Text, string button2Text, UnityEngine.Events.UnityAction button1Action, UnityEngine.Events.UnityAction button2Action)
+    private void CreatePanelContent(GameObject panel, string title, string button1Text, string button2Text, UnityAction button1Action, UnityAction button2Action)
     {
-        // Create title
+        // Добавляем фон
+        Image panelImage = panel.AddComponent<Image>();
+        panelImage.color = new Color(0.9f, 0.9f, 0.9f, 0.95f);
+
+        // Создаем заголовок
         GameObject titleObj = new GameObject("Title");
         titleObj.transform.SetParent(panel.transform, false);
-        TextMeshProUGUI title = titleObj.AddComponent<TextMeshProUGUI>();
-        title.text = titleText;
-        title.fontSize = 48;
-        title.alignment = TextAlignmentOptions.Center;
+        TextMeshProUGUI titleText = titleObj.AddComponent<TextMeshProUGUI>();
+        titleText.text = title;
+        titleText.fontSize = 48;
+        titleText.alignment = TextAlignmentOptions.Center;
+        titleText.color = Color.black;
 
-        RectTransform titleRect = title.GetComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0.5f, 0.7f);
-        titleRect.anchorMax = new Vector2(0.5f, 0.9f);
-        titleRect.sizeDelta = new Vector2(400, 100);
-        titleRect.anchoredPosition = Vector2.zero;
+        RectTransform titleRect = titleText.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0.1f, 0.6f);
+        titleRect.anchorMax = new Vector2(0.9f, 0.9f);
+        titleRect.sizeDelta = Vector2.zero;
 
-        // Create buttons
-        CreateButton(panel.transform, button1Text, new Vector2(0.5f, 0.4f), button1Action);
-        CreateButton(panel.transform, button2Text, new Vector2(0.5f, 0.2f), button2Action);
+        // Создаем кнопку Next Level
+        GameObject button1Obj = new GameObject(button1Text + " Button");
+        button1Obj.transform.SetParent(panel.transform, false);
+        Button button1 = button1Obj.AddComponent<Button>();
+        Image button1Image = button1Obj.AddComponent<Image>();
+        button1Image.color = new Color(0.2f, 0.6f, 1f, 1f);
+
+        GameObject button1TextObj = new GameObject("Button Text");
+        button1TextObj.transform.SetParent(button1Obj.transform, false);
+        TextMeshProUGUI button1TMPro = button1TextObj.AddComponent<TextMeshProUGUI>();
+        button1TMPro.text = button1Text;
+        button1TMPro.fontSize = 32;
+        button1TMPro.alignment = TextAlignmentOptions.Center;
+        button1TMPro.color = Color.white;
+
+        RectTransform button1Rect = button1.GetComponent<RectTransform>();
+        button1Rect.anchorMin = new Vector2(0.2f, 0.35f);
+        button1Rect.anchorMax = new Vector2(0.8f, 0.5f);
+        button1Rect.sizeDelta = Vector2.zero;
+
+        RectTransform button1TextRect = button1TMPro.GetComponent<RectTransform>();
+        button1TextRect.anchorMin = Vector2.zero;
+        button1TextRect.anchorMax = Vector2.one;
+        button1TextRect.sizeDelta = Vector2.zero;
+
+        // Создаем кнопку Level Select
+        GameObject button2Obj = new GameObject(button2Text + " Button");
+        button2Obj.transform.SetParent(panel.transform, false);
+        Button button2 = button2Obj.AddComponent<Button>();
+        Image button2Image = button2Obj.AddComponent<Image>();
+        button2Image.color = new Color(0.7f, 0.7f, 0.7f, 1f);
+
+        GameObject button2TextObj = new GameObject("Button Text");
+        button2TextObj.transform.SetParent(button2Obj.transform, false);
+        TextMeshProUGUI button2TMPro = button2TextObj.AddComponent<TextMeshProUGUI>();
+        button2TMPro.text = button2Text;
+        button2TMPro.fontSize = 32;
+        button2TMPro.alignment = TextAlignmentOptions.Center;
+        button2TMPro.color = Color.white;
+
+        RectTransform button2Rect = button2.GetComponent<RectTransform>();
+        button2Rect.anchorMin = new Vector2(0.2f, 0.15f);
+        button2Rect.anchorMax = new Vector2(0.8f, 0.3f);
+        button2Rect.sizeDelta = Vector2.zero;
+
+        RectTransform button2TextRect = button2TMPro.GetComponent<RectTransform>();
+        button2TextRect.anchorMin = Vector2.zero;
+        button2TextRect.anchorMax = Vector2.one;
+        button2TextRect.sizeDelta = Vector2.zero;
+
+        // Добавляем обработчики нажатий
+        button1.onClick.AddListener(button1Action);
+        button2.onClick.AddListener(button2Action);
     }
 
-    private void CreateButton(Transform parent, string text, Vector2 anchorPosition, UnityEngine.Events.UnityAction action)
+    private void CreateButton(Transform parent, string text, Vector2 anchorPosition, UnityAction action)
     {
         GameObject buttonObj = new GameObject(text + " Button");
         buttonObj.transform.SetParent(parent, false);
@@ -198,7 +334,7 @@ public class UIManager : MonoBehaviour
             () => gameManager.StartInfiniteMode());
     }
 
-    private void CreateLevelButton(Transform parent, int level, UnityEngine.Events.UnityAction action)
+    private void CreateLevelButton(Transform parent, int level, UnityAction action)
     {
         GameObject buttonObj = new GameObject("Level " + level + " Button");
         buttonObj.transform.SetParent(parent, false);

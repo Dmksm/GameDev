@@ -23,6 +23,8 @@ public class LevelGenerator : MonoBehaviour
     private GameObject board;
     private List<Polygon> segments = new List<Polygon>();
     private LineManager lineManager;
+    private List<LineRenderer> hintLines = new List<LineRenderer>();
+    private bool areHintsVisible = false;
 
     private void Start()
     {
@@ -68,8 +70,8 @@ public class LevelGenerator : MonoBehaviour
         // Получаем количество доступных линий из LineManager
         int availableLines = lineManager.GetAvailableLines();
         
-        // Генерируем линии для разделения поля
-        List<(Vector2, Vector2)> divisionLines = GenerateDivisionLines(availableLines);
+        // Генерируем линии для разделения поля и создаем линии-подсказки
+        List<(Vector2, Vector2)> divisionLines = GenerateDivisionLines();
         
         // Разделяем поле на сегменты
         SplitPolygonsWithLines(divisionLines);
@@ -79,34 +81,95 @@ public class LevelGenerator : MonoBehaviour
 
         // Заполняем сегменты объектами
         FillSegmentsWithObjects();
+
+        // Скрываем подсказки при генерации нового уровня
+        HideHints();
     }
 
-    private List<(Vector2, Vector2)> GenerateDivisionLines(int count)
+    private List<(Vector2, Vector2)> GenerateDivisionLines()
     {
-        List<(Vector2, Vector2)> lines = new List<(Vector2, Vector2)>();
-        
-        for (int i = 0; i < count; i++)
+        // Очищаем предыдущие линии-подсказки
+        foreach (var line in hintLines)
         {
-            bool isHorizontal = Random.value > 0.5f;
-            Vector2 start, end;
-
-            if (isHorizontal)
+            if (line != null)
             {
-                float y = Random.Range(-CAMERA_HEIGHT/2 + 1, CAMERA_HEIGHT/2 - 1);
-                start = new Vector2(-CAMERA_WIDTH/2, y);
-                end = new Vector2(CAMERA_WIDTH/2, y);
+                Destroy(line.gameObject);
             }
-            else
-            {
-                float x = Random.Range(-CAMERA_WIDTH/2 + 1, CAMERA_WIDTH/2 - 1);
-                start = new Vector2(x, -CAMERA_HEIGHT/2);
-                end = new Vector2(x, CAMERA_HEIGHT/2);
-            }
+        }
+        hintLines.Clear();
 
-            lines.Add((start, end));
+        // Генерируем новые линии
+        int numLines = 3; // Фиксированное количество линий
+        List<Vector2> lineStartPoints = new List<Vector2>();
+        List<Vector2> lineEndPoints = new List<Vector2>();
+
+        for (int i = 0; i < numLines; i++)
+        {
+            Vector2 startPoint, endPoint;
+            bool validLine;
+            int attempts = 0;
+            const int maxAttempts = 100;
+
+            do
+            {
+                validLine = true;
+                if (Random.value < 0.5f)
+                {
+                    // Вертикальная линия
+                    float x = Random.Range(-BOARD_WIDTH / 2 + 1f, BOARD_WIDTH / 2 - 1f);
+                    startPoint = new Vector2(x, BOARD_HEIGHT / 2);
+                    endPoint = new Vector2(x, -BOARD_HEIGHT / 2);
+                }
+                else
+                {
+                    // Горизонтальная линия
+                    float y = Random.Range(-BOARD_HEIGHT / 2 + 1f, BOARD_HEIGHT / 2 - 1f);
+                    startPoint = new Vector2(-BOARD_WIDTH / 2, y);
+                    endPoint = new Vector2(BOARD_WIDTH / 2, y);
+                }
+
+                // Проверяем, не слишком ли близко к существующим линиям
+                for (int j = 0; j < lineStartPoints.Count; j++)
+                {
+                    if (Vector2.Distance(startPoint, lineStartPoints[j]) < 1f ||
+                        Vector2.Distance(endPoint, lineEndPoints[j]) < 1f)
+                    {
+                        validLine = false;
+                        break;
+                    }
+                }
+
+                attempts++;
+            } while (!validLine && attempts < maxAttempts);
+
+            if (validLine)
+            {
+                lineStartPoints.Add(startPoint);
+                lineEndPoints.Add(endPoint);
+
+                // Создаем линию-подсказку
+                GameObject lineObj = new GameObject($"HintLine_{i}");
+                lineObj.transform.SetParent(transform);
+                LineRenderer lineRenderer = lineObj.AddComponent<LineRenderer>();
+                lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
+                lineRenderer.startColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                lineRenderer.endColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                lineRenderer.startWidth = 0.1f;
+                lineRenderer.endWidth = 0.1f;
+                lineRenderer.positionCount = 2;
+                lineRenderer.SetPosition(0, new Vector3(startPoint.x, startPoint.y, 0));
+                lineRenderer.SetPosition(1, new Vector3(endPoint.x, endPoint.y, 0));
+                lineRenderer.gameObject.SetActive(false);
+                hintLines.Add(lineRenderer);
+            }
         }
 
-        return lines;
+        List<(Vector2, Vector2)> result = new List<(Vector2, Vector2)>();
+        for (int i = 0; i < lineStartPoints.Count; i++)
+        {
+            result.Add((lineStartPoints[i], lineEndPoints[i]));
+        }
+        return result;
     }
 
     private void SplitPolygonsWithLines(List<(Vector2, Vector2)> lines)
@@ -445,5 +508,29 @@ public class LevelGenerator : MonoBehaviour
     public List<GameObject> GetJunks()
     {
         return junks;
+    }
+
+    public void ToggleHints()
+    {
+        areHintsVisible = !areHintsVisible;
+        foreach (var line in hintLines)
+        {
+            if (line != null)
+            {
+                line.gameObject.SetActive(areHintsVisible);
+            }
+        }
+    }
+
+    public void HideHints()
+    {
+        areHintsVisible = false;
+        foreach (var line in hintLines)
+        {
+            if (line != null)
+            {
+                line.gameObject.SetActive(false);
+            }
+        }
     }
 }

@@ -121,11 +121,12 @@ public class GameManager : MonoBehaviour
     public void StartInfiniteMode()
     {
         isInfiniteMode = true;
-        remainingLines = 999;
+        remainingLines = 3;
+        currentLevel = 1; // Сбрасываем уровень
         
         ResetLevel();
         uiManager.HideAllScreens();
-        uiManager.UpdateLinesCounter(remainingLines);
+        uiManager.UpdateUI();
     }
 
     private void ResetLevel()
@@ -148,7 +149,7 @@ public class GameManager : MonoBehaviour
 
     public void LoadNextLevel()
     {
-        LoadLevel(currentLevel + 1);
+        LoadLevel(currentLevel + 1); // Исправляем с currentLevel++ на currentLevel + 1
     }
 
     public void ShowLevelSelect()
@@ -245,9 +246,15 @@ public class GameManager : MonoBehaviour
 
     private void WinLevel()
     {
-        uiManager.ShowWinScreen();
-        currentLevel++;
-        remainingLines = 3;
+        if (isInfiniteMode)
+        {
+            currentLevel++; // Увеличиваем уровень
+            uiManager.ShowWinScreen(); // Показываем экран победы
+        }
+        else
+        {
+            uiManager.ShowWinScreen();
+        }
     }
 
     private void LoseLevel()
@@ -257,12 +264,51 @@ public class GameManager : MonoBehaviour
 
     public void NextLevel()
     {
-        ResetLevel();
-        uiManager.HideWinScreen();
+        if (isInfiniteMode)
+        {
+            remainingLines = 3; // Сбрасываем количество линий
+            ResetLevel(); // Генерируем новый уровень
+            uiManager.UpdateUI(); // Обновляем UI
+            uiManager.HideWinScreen(); // Скрываем экран победы
+        }
+        else
+        {
+            LoadNextLevel();
+        }
     }
 
     public int GetRemainingLines()
     {
         return remainingLines;
+    }
+
+    public bool IsInInfiniteMode()
+    {
+        return isInfiniteMode;
+    }
+
+    public int GetCurrentLevel()
+    {
+        return currentLevel;
+    }
+
+    public void OnLevelComplete()
+    {
+        if (isInfiniteMode)
+        {
+            currentLevel++; // Увеличиваем уровень в бесконечном режиме
+            remainingLines = 3; // Сбрасываем количество линий
+            ResetLevel();
+            uiManager.UpdateUI();
+        }
+        else
+        {
+            uiManager.ShowWinScreen();
+        }
+    }
+
+    public void ToggleHint()
+    {
+        levelGenerator.ToggleHints();
     }
 }
