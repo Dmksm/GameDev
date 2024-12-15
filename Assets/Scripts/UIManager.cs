@@ -36,7 +36,7 @@ public class UIManager : MonoBehaviour
     private void CreateUI()
     {
         // Get the canvas from GameManager
-        Canvas canvas = GameObject.FindObjectOfType<Canvas>();
+        Canvas canvas = Object.FindFirstObjectByType<Canvas>();
         if (canvas == null)
         {
             Debug.LogError("Canvas not found!");

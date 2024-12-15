@@ -19,7 +19,7 @@ public class LineManager : MonoBehaviour
     {
         this.gameManager = gameManager;
         this.boardManager = boardManager;
-        this.levelGenerator = FindObjectOfType<LevelGenerator>();
+        this.levelGenerator = Object.FindFirstObjectByType<LevelGenerator>();
         mainCamera = Camera.main;
         CreateLineMaterials();
         CreatePreviewLine();
@@ -63,7 +63,7 @@ public class LineManager : MonoBehaviour
         // Проверяем пересечение со всеми объектами
         foreach (var star in levelGenerator.GetStars())
         {
-            if (IsLineIntersectingObject(points[0], points[1], star.transform.position, 0.25f))
+            if (IsLineIntersectingObject(points[0], points[1], star.transform.position, 0.5f))
             {
                 return true;
             }
@@ -71,7 +71,7 @@ public class LineManager : MonoBehaviour
 
         foreach (var junk in levelGenerator.GetJunks())
         {
-            if (IsLineIntersectingObject(points[0], points[1], junk.transform.position, 0.15f))
+            if (IsLineIntersectingObject(points[0], points[1], junk.transform.position, 0.5f))
             {
                 return true;
             }
