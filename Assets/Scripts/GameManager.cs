@@ -149,7 +149,11 @@ public class GameManager : MonoBehaviour
 
     public void LoadNextLevel()
     {
-        LoadLevel(currentLevel + 1); // Исправляем с currentLevel++ на currentLevel + 1
+        currentLevel++; // Увеличиваем текущий уровень
+        remainingLines = CalculateRemainingLines(currentLevel);
+        ResetLevel();
+        uiManager.HideAllScreens();
+        uiManager.UpdateUI();
     }
 
     public void ShowLevelSelect()
@@ -248,7 +252,6 @@ public class GameManager : MonoBehaviour
     {
         if (isInfiniteMode)
         {
-            currentLevel++; // Увеличиваем уровень
             uiManager.ShowWinScreen(); // Показываем экран победы
         }
         else
@@ -266,7 +269,8 @@ public class GameManager : MonoBehaviour
     {
         if (isInfiniteMode)
         {
-            remainingLines = 3; // Сбрасываем количество линий
+            currentLevel++; // Увеличиваем уровень здесь
+            remainingLines = CalculateRemainingLines(currentLevel); // Вычисляем количество линий для нового уровня
             ResetLevel(); // Генерируем новый уровень
             uiManager.UpdateUI(); // Обновляем UI
             uiManager.HideWinScreen(); // Скрываем экран победы
@@ -296,14 +300,12 @@ public class GameManager : MonoBehaviour
     {
         if (isInfiniteMode)
         {
-            currentLevel++; // Увеличиваем уровень в бесконечном режиме
-            remainingLines = 3; // Сбрасываем количество линий
-            ResetLevel();
-            uiManager.UpdateUI();
+            WinLevel(); // Просто показываем экран победы
         }
         else
         {
-            uiManager.ShowWinScreen();
+            // Логика для обычного режима
+            WinLevel();
         }
     }
 
