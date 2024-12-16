@@ -24,12 +24,14 @@ public class LevelGenerator : MonoBehaviour
     private GameObject board;
     private List<Polygon> segments = new List<Polygon>();
     private LineManager lineManager;
+    private GameManager gameManager;
     private List<LineRenderer> hintLines = new List<LineRenderer>();
     private bool areHintsVisible = false;
 
     private void Start()
     {
         lineManager = FindObjectOfType<LineManager>();
+        gameManager = FindObjectOfType<GameManager>();
     }
 
     public void Initialize()
@@ -100,7 +102,7 @@ public class LevelGenerator : MonoBehaviour
         hintLines.Clear();
 
         // Генерируем новые линии
-        int numLines = 3; // Фиксированное количество линий
+        int numLines = gameManager.GetRemainingLines();
         List<Vector2> lineStartPoints = new List<Vector2>();
         List<Vector2> lineEndPoints = new List<Vector2>();
 
