@@ -18,6 +18,9 @@ public class LevelGenerator : MonoBehaviour
     private const float MIN_OBJECT_SPACING = 1f;
     private const float OBJECT_RADIUS = 0.2f; // Единый размер для всех объектов
     private const float SAFE_MARGIN = 0.3f; // Отступ от краев экрана
+    
+    private const float STAR_RADIUS = 0.25f;
+    private const float JUNK_RADIUS = 0.25f;
 
     private List<GameObject> stars = new List<GameObject>();
     private List<GameObject> junks = new List<GameObject>();
@@ -25,6 +28,7 @@ public class LevelGenerator : MonoBehaviour
     private List<Polygon> segments = new List<Polygon>();
     private LineManager lineManager;
     private GameManager gameManager;
+    private SpriteManager spriteManager;
     private List<LineRenderer> hintLines = new List<LineRenderer>();
     private bool areHintsVisible = false;
 
@@ -32,6 +36,7 @@ public class LevelGenerator : MonoBehaviour
     {
         lineManager = FindObjectOfType<LineManager>();
         gameManager = FindObjectOfType<GameManager>();
+        spriteManager = FindObjectOfType<SpriteManager>();
     }
 
     public void Initialize()
@@ -39,17 +44,6 @@ public class LevelGenerator : MonoBehaviour
         CreateBoard();
     }
 
-    private void CreateBoard()
-    {
-        board = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        board.transform.SetParent(transform);
-        board.transform.localScale = new Vector3(CAMERA_WIDTH, CAMERA_HEIGHT, 1);
-        board.transform.position = new Vector3(0, 0, 1);
-        
-        Material material = new Material(Shader.Find("Sprites/Default"));
-        material.color = Color.white;
-        board.GetComponent<Renderer>().material = material;
-    }
 
     public void GenerateLevel(int level)
     {
@@ -504,32 +498,87 @@ public class LevelGenerator : MonoBehaviour
 
     private GameObject CreateStar(Vector2 position)
     {
-        GameObject star = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject star = new GameObject("Star");
         star.transform.SetParent(transform);
         star.transform.position = new Vector3(position.x, position.y, 0);
-
-        star.AddComponent<CircleCollider2D>();
         
-        Material material = new Material(Shader.Find("Sprites/Default"));
-        material.color = Color.yellow;
-        star.GetComponent<Renderer>().material = material;
-
+        var collider = star.AddComponent<CircleCollider2D>();
+        collider.radius = STAR_RADIUS;
+        
+        if (spriteManager != null)
+        {
+            spriteManager.ApplyStarSprite(star);
+        }
+        
         return star;
     }
 
     private GameObject CreateJunk(Vector2 position)
     {
-        GameObject junk = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject junk = new GameObject("Junk");
         junk.transform.SetParent(transform);
         junk.transform.position = new Vector3(position.x, position.y, 0);
 
-        junk.AddComponent<CircleCollider2D>();
+        var collider = junk.AddComponent<CircleCollider2D>();
+        collider.radius = JUNK_RADIUS;
         
-        Material material = new Material(Shader.Find("Sprites/Default"));
-        material.color = Color.gray;
-        junk.GetComponent<Renderer>().material = material;
+        if (spriteManager != null)
+        {
+            spriteManager.ApplyJunkSprite(junk);
+        }
 
         return junk;
+    }
+
+    private void CreateBoard()
+    {
+        board = new GameObject("Board");
+        board.transform.SetParent(transform);
+        board.transform.localScale = new Vector3(CAMERA_WIDTH, CAMERA_HEIGHT, 1);
+        board.transform.position = new Vector3(0, 0, 1);
+        
+        var renderer = board.AddComponent<MeshRenderer>();
+        var filter = board.AddComponent<MeshFilter>();
+        filter.mesh = CreateQuadMesh();
+        
+        if (spriteManager != null)
+        {
+            spriteManager.ApplyBoardSprite(board);
+        }
+    }
+
+    private Mesh CreateQuadMesh()
+    {
+        Mesh mesh = new Mesh();
+        
+        Vector3[] vertices = new Vector3[4]
+        {
+            new Vector3(-0.5f, -0.5f, 0),
+            new Vector3(0.5f, -0.5f, 0),
+            new Vector3(-0.5f, 0.5f, 0),
+            new Vector3(0.5f, 0.5f, 0)
+        };
+        
+        int[] triangles = new int[6]
+        {
+            0, 2, 1,
+            2, 3, 1
+        };
+        
+        Vector2[] uv = new Vector2[4]
+        {
+            new Vector2(0, 0),
+            new Vector2(1, 0),
+            new Vector2(0, 1),
+            new Vector2(1, 1)
+        };
+        
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.uv = uv;
+        mesh.RecalculateNormals();
+        
+        return mesh;
     }
 
     public void ClearLevel()

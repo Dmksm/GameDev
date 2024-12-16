@@ -14,6 +14,7 @@ public class LineManager : MonoBehaviour
 
     private Material normalLineMaterial;
     private const float BOARD_SIZE = 100f;
+    private const float LINE_WIDTH = 0.1f; // Match JUNK_COLLIDER_RADIUS from SpriteManager
     private int maxLines = 4;
 
     public void Initialize(GameManager gameManager, BoardManager boardManager)
@@ -43,8 +44,8 @@ public class LineManager : MonoBehaviour
 
     private void SetupLineRenderer(LineRenderer line)
     {
-        line.startWidth = 0.1f;
-        line.endWidth = 0.1f;
+        line.startWidth = LINE_WIDTH;
+        line.endWidth = LINE_WIDTH;
         line.material = new Material(Shader.Find("Sprites/Default"));
         line.positionCount = 2;
     }
@@ -72,12 +73,13 @@ public class LineManager : MonoBehaviour
 
         foreach (var junk in levelGenerator.GetJunks())
         {
-            if (IsLineIntersectingObject(points[0], points[1], junk.transform.position, 0.15f))
+            // Use the actual collider radius from the junk object
+            float junkRadius = junk.GetComponent<CircleCollider2D>().radius;
+            if (IsLineIntersectingObject(points[0], points[1], junk.transform.position, junkRadius))
             {
                 return true;
             }
         }
-
         return false;
     }
 

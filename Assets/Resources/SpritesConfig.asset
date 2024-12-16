@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aafa83398bb4b5c4b98e974cfe7d420d, type: 3}
+  m_Name: SpritesConfig
+  m_EditorClassIdentifier: 
+  starSprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+  junkSprite: {fileID: 0}
+  boardSprite: {fileID: 0}
+  lineSprite: {fileID: 0}
+  starColor: {r: 0.8540381, g: 0.8867924, b: 0.037646834, a: 1}
+  junkColor: {r: 0.16359764, g: 0.048460316, b: 0.31132078, a: 1}
+  boardColor: {r: 0.1459594, g: 0.22017194, b: 0.754717, a: 1}
+  lineColor: {r: 0.11627804, g: 0.6320754, b: 0.60535735, a: 1}
