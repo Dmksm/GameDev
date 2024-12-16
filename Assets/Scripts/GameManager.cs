@@ -313,4 +313,13 @@ public class GameManager : MonoBehaviour
     {
         levelGenerator.ToggleHints();
     }
+
+    public void UndoMove()
+    {
+        if (lineManager.UndoLastLine())
+        {
+            remainingLines = Mathf.Min(remainingLines + 1, CalculateRemainingLines(currentLevel));
+            uiManager.UpdateUI();
+        }
+    }
 }

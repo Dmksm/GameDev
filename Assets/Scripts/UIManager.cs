@@ -12,6 +12,7 @@ public class UIManager : MonoBehaviour
     private GameObject winPanel;
     private GameObject losePanel;
     private GameObject levelSelectPanel;
+    private Button undoButton;
 
     public void Initialize(GameManager gm)
     {
@@ -128,6 +129,42 @@ public class UIManager : MonoBehaviour
         levelRect.sizeDelta = new Vector2(200, 50);
         levelRect.anchoredPosition = new Vector2(-20, -20);
 
+        // Setup undo button
+        GameObject undoObj = new GameObject("Undo Button");
+        undoObj.transform.SetParent(canvas.transform, false);
+        undoButton = undoObj.AddComponent<Button>();
+        Image undoImage = undoObj.AddComponent<Image>();
+        undoImage.color = new Color(0.7f, 0.7f, 0.7f, 1f); // Серый цвет
+
+        // Create arrow symbol
+        GameObject arrowObj = new GameObject("Arrow");
+        arrowObj.transform.SetParent(undoObj.transform, false);
+        TextMeshProUGUI arrowText = arrowObj.AddComponent<TextMeshProUGUI>();
+        arrowText.text = "←"; // Unicode стрелка влево
+        arrowText.fontSize = 32;
+        arrowText.alignment = TextAlignmentOptions.Center;
+        arrowText.color = Color.black;
+
+        // Position the undo button below level counter
+        RectTransform undoRect = undoObj.GetComponent<RectTransform>();
+        undoRect.anchorMin = new Vector2(1, 1);
+        undoRect.anchorMax = new Vector2(1, 1);
+        undoRect.pivot = new Vector2(1, 1);
+        undoRect.sizeDelta = new Vector2(50, 50);
+        undoRect.anchoredPosition = new Vector2(-20, -80);
+
+        RectTransform arrowRect = arrowObj.GetComponent<RectTransform>();
+        arrowRect.anchorMin = Vector2.zero;
+        arrowRect.anchorMax = Vector2.one;
+        arrowRect.sizeDelta = Vector2.zero;
+
+        undoButton.onClick.AddListener(() => {
+            if (gameManager != null)
+            {
+                gameManager.UndoMove();
+            }
+        });
+
         // Setup win panel
         CreatePanelContent(winPanel, "Level Complete!", "Next Level", "Level Select", () =>
         {
@@ -156,15 +193,17 @@ public class UIManager : MonoBehaviour
         {
             linesCounterText.text = $"Lines: {gameManager.GetRemainingLines()}";
             
-            // Обновляем отображение уровня в бесконечном режиме
+            // Обновляем отображение уровня и кнопки отмены в бесконечном режиме
             if (gameManager.IsInInfiniteMode())
             {
                 levelCounterText.text = $"Level: {gameManager.GetCurrentLevel()}";
                 levelCounterText.gameObject.SetActive(true);
+                undoButton.gameObject.SetActive(true);
             }
             else
             {
                 levelCounterText.gameObject.SetActive(false);
+                undoButton.gameObject.SetActive(false);
             }
         }
     }

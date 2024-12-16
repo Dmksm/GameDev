@@ -187,4 +187,19 @@ public class LineManager : MonoBehaviour
     {
         maxLines = count;
     }
+
+    public bool UndoLastLine()
+    {
+        if (drawnLines.Count > 0)
+        {
+            var lastLine = drawnLines[drawnLines.Count - 1];
+            if (lastLine != null)
+            {
+                Destroy(lastLine.gameObject);
+            }
+            drawnLines.RemoveAt(drawnLines.Count - 1);
+            return true;
+        }
+        return false;
+    }
 }
