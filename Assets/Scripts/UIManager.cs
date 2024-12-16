@@ -432,6 +432,12 @@ public class UIManager : MonoBehaviour
     {
         HideAllScreens();
         levelSelectPanel.SetActive(true);
+        
+        // Скрываем UI элементы в главном меню
+        if (linesCounterText != null) linesCounterText.gameObject.SetActive(false);
+        if (levelCounterText != null) levelCounterText.gameObject.SetActive(false);
+        if (hintButton != null) hintButton.gameObject.SetActive(false);
+        if (undoButton != null) undoButton.gameObject.SetActive(false);
     }
 
     public void HideAllScreens()
@@ -439,6 +445,15 @@ public class UIManager : MonoBehaviour
         winPanel.SetActive(false);
         losePanel.SetActive(false);
         levelSelectPanel.SetActive(false);
+
+        // Показываем UI элементы при выходе из главного меню
+        if (linesCounterText != null) linesCounterText.gameObject.SetActive(true);
+        if (gameManager != null && gameManager.IsInInfiniteMode())
+        {
+            if (levelCounterText != null) levelCounterText.gameObject.SetActive(true);
+            if (undoButton != null) undoButton.gameObject.SetActive(true);
+        }
+        if (hintButton != null) hintButton.gameObject.SetActive(true);
     }
 
     public void UpdateLinesCounter(int remainingLines)
