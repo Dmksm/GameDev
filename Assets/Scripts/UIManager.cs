@@ -294,7 +294,7 @@ public class UIManager : MonoBehaviour
         GameObject titleObj = new GameObject("Level Select Title");
         titleObj.transform.SetParent(levelSelectPanel.transform, false);
         TextMeshProUGUI title = titleObj.AddComponent<TextMeshProUGUI>();
-        title.text = "Select Level";
+        title.text = "Select Mode";
         title.fontSize = 48;
         title.alignment = TextAlignmentOptions.Center;
 
@@ -304,34 +304,33 @@ public class UIManager : MonoBehaviour
         titleRect.sizeDelta = new Vector2(400, 100);
         titleRect.anchoredPosition = Vector2.zero;
 
-        // Create a grid container for level buttons
-        GameObject gridContainer = new GameObject("Level Grid");
-        gridContainer.transform.SetParent(levelSelectPanel.transform, false);
-        RectTransform gridRect = gridContainer.AddComponent<RectTransform>();
-        gridRect.anchorMin = new Vector2(0.1f, 0.2f);
-        gridRect.anchorMax = new Vector2(0.9f, 0.8f);
-        gridRect.sizeDelta = Vector2.zero;
+        // Create infinite mode button in the center
+        GameObject buttonObj = new GameObject("Infinite Mode Button");
+        buttonObj.transform.SetParent(levelSelectPanel.transform, false);
 
-        GridLayoutGroup grid = gridContainer.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(160, 160);
-        grid.spacing = new Vector2(20, 20);
-        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
-        grid.childAlignment = TextAnchor.MiddleCenter;
-        grid.constraint = GridLayoutGroup.Constraint.Flexible;
+        Image buttonImage = buttonObj.AddComponent<Image>();
+        buttonImage.color = Color.black;
 
-        // Create level buttons
-        for (int i = 0; i < 5; i++)
-        {
-            int level = i + 1;
-            CreateLevelButton(gridContainer.transform, level, () => gameManager.LoadLevel(level));
-        }
+        Button button = buttonObj.AddComponent<Button>();
+        button.onClick.AddListener(() => gameManager.StartInfiniteMode());
 
-        // Create infinite mode button at the bottom
-        CreateButton(levelSelectPanel.transform, 
-            "Infinite Mode", 
-            new Vector2(0.5f, 0.1f), 
-            () => gameManager.StartInfiniteMode());
+        GameObject textObj = new GameObject("Text");
+        textObj.transform.SetParent(buttonObj.transform, false);
+        TextMeshProUGUI buttonText = textObj.AddComponent<TextMeshProUGUI>();
+        buttonText.text = "Infinite Mode";
+        buttonText.fontSize = 32;
+        buttonText.alignment = TextAlignmentOptions.Center;
+        buttonText.color = Color.white;
+
+        RectTransform buttonRect = buttonObj.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(0.3f, 0.45f);
+        buttonRect.anchorMax = new Vector2(0.7f, 0.55f);
+        buttonRect.sizeDelta = Vector2.zero;
+
+        RectTransform textRect = textObj.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
     }
 
     private void CreateLevelButton(Transform parent, int level, UnityAction action)
