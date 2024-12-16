@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEditor;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -419,7 +418,7 @@ public class LevelGenerator : MonoBehaviour
                         Vector2 start = points[j];
                         Vector2 end = points[nextIndex];
                         
-                        float distanceToLine = HandleUtility.DistancePointLine(position, start, end);
+                        float distanceToLine = DistancePointLine(position, start, end);
                         if (distanceToLine < minDistanceFromLine)
                         {
                             isTooClose = true;
@@ -597,5 +596,20 @@ public class LevelGenerator : MonoBehaviour
                 line.gameObject.SetActive(false);
             }
         }
+    }
+
+    // Helper method to calculate distance from point to line
+    private float DistancePointLine(Vector2 point, Vector2 lineStart, Vector2 lineEnd)
+    {
+        Vector2 line = lineEnd - lineStart;
+        Vector2 pointToStart = point - lineStart;
+        
+        float lineLengthSquared = line.sqrMagnitude;
+        if (lineLengthSquared == 0f)
+            return pointToStart.magnitude;
+            
+        float t = Mathf.Clamp01(Vector2.Dot(pointToStart, line) / lineLengthSquared);
+        Vector2 projection = lineStart + t * line;
+        return Vector2.Distance(point, projection);
     }
 }

@@ -52,8 +52,42 @@ public class LineManager : MonoBehaviour
     private Vector3[] ExtendLine(Vector3 start, Vector3 end)
     {
         Vector3 direction = (end - start).normalized;
-        Vector3 extendedStart = start - direction * BOARD_SIZE;
-        Vector3 extendedEnd = start + direction * BOARD_SIZE;
+        
+        // Используем размеры из LevelGenerator
+        float boardWidth = 8f;
+        float boardHeight = 12f;
+        
+        // Находим точки пересечения с границами поля
+        float minX = -boardWidth/2;
+        float maxX = boardWidth/2;
+        float minY = -boardHeight/2;
+        float maxY = boardHeight/2;
+
+        float t1 = float.MinValue;
+        float t2 = float.MaxValue;
+
+        // Проверяем пересечения с вертикальными границами
+        if (Mathf.Abs(direction.x) > 0.0001f)
+        {
+            float tx1 = (minX - start.x) / direction.x;
+            float tx2 = (maxX - start.x) / direction.x;
+            t1 = Mathf.Max(t1, Mathf.Min(tx1, tx2));
+            t2 = Mathf.Min(t2, Mathf.Max(tx1, tx2));
+        }
+
+        // Проверяем пересечения с горизонтальными границами
+        if (Mathf.Abs(direction.y) > 0.0001f)
+        {
+            float ty1 = (minY - start.y) / direction.y;
+            float ty2 = (maxY - start.y) / direction.y;
+            t1 = Mathf.Max(t1, Mathf.Min(ty1, ty2));
+            t2 = Mathf.Min(t2, Mathf.Max(ty1, ty2));
+        }
+
+        // Вычисляем точки пересечения с границами
+        Vector3 extendedStart = start + direction * t1;
+        Vector3 extendedEnd = start + direction * t2;
+
         return new Vector3[] { extendedStart, extendedEnd };
     }
 
