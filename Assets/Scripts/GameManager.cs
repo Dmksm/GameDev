@@ -158,6 +158,10 @@ public class GameManager : MonoBehaviour
 
     public void ShowLevelSelect()
     {
+        // Очищаем все объекты
+        lineManager.ClearLines();
+        levelGenerator.ClearLevel();
+        
         uiManager.ShowLevelSelect();
     }
 

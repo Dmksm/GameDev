@@ -532,26 +532,29 @@ public class LevelGenerator : MonoBehaviour
         return junk;
     }
 
-    private void ClearLevel()
+    public void ClearLevel()
     {
+        // Очищаем звезды
         foreach (var star in stars)
         {
             if (star != null)
             {
-                Destroy(star);
+                Destroy(star.gameObject);
             }
         }
         stars.Clear();
 
+        // Очищаем мусор
         foreach (var junk in junks)
         {
             if (junk != null)
             {
-                Destroy(junk);
+                Destroy(junk.gameObject);
             }
         }
         junks.Clear();
-        
+
+        // Очищаем сегменты
         foreach (var segment in segments)
         {
             if (segment != null)
