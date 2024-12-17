@@ -16,12 +16,20 @@ public class UIManager : MonoBehaviour
 
     public void Initialize(GameManager gm)
     {
-        gameManager = gm;
-        CreateUI();
+        Debug.Log("UIManager: Starting initialization");
+        try {
+            gameManager = gm;
+            CreateUI();
+            Debug.Log("UIManager: Initialization completed successfully");
+        }
+        catch (System.Exception e) {
+            Debug.LogError($"UIManager: Error during initialization: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     public void HideWinScreen()
     {
+        Debug.Log("UIManager: Hiding win screen");
         winPanel.SetActive(false);
     }
 

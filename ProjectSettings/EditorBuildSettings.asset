@@ -8,7 +8,11 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
+  - enabled: 0
+    path: Assets/CosmicLinesGame.unity
+    guid: 1e62eb671d575de42b582a30a35eefaa
   m_configObjects:
+    com.unity.adaptiveperformance.google.android.provider_settings: {fileID: 11400000, guid: 00a1fc01c38fe0e43b6f0648b1aa334a, type: 2}
     com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 99a80c19e221fa840ab75e15289cd022, type: 2}
     com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000, guid: db5db8f6ebb3c114b8347278c1d6fc06, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

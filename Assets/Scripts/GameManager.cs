@@ -15,20 +15,30 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        Camera.main.orthographicSize = 8.9f;
-        Camera.main.transform.position = new Vector3(0, 0, -10);
-        SetupCamera();
-        InitializeManagers();
-        ShowLevelSelect();
+        Debug.Log("GameManager: Starting initialization");
+        try {
+            Camera.main.orthographicSize = 8.9f;
+            Camera.main.transform.position = new Vector3(0, 0, -10);
+            Debug.Log($"GameManager: Camera initialized. OrthographicSize: {Camera.main.orthographicSize}, Position: {Camera.main.transform.position}");
+            SetupCamera();
+            InitializeManagers();
+            ShowLevelSelect();
+            Debug.Log("GameManager: Initialization completed successfully");
+        }
+        catch (System.Exception e) {
+            Debug.LogError($"GameManager: Error during initialization: {e.Message}\n{e.StackTrace}");
+        }
     }
 
     private void SetupCamera()
     {
+        Debug.Log("GameManager: Setting up camera");
         Camera.main.orthographic = true;
     }
 
     private void InitializeManagers()
     {
+        Debug.Log("GameManager: Initializing managers");
         // Create UI elements first
         GameObject canvas = new GameObject("Canvas");
         canvas.transform.SetParent(transform);
