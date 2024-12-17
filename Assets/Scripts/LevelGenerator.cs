@@ -43,6 +43,10 @@ public class LevelGenerator : MonoBehaviour
         CreateBoard();
     }
 
+    public void SetSpriteManager(SpriteManager manager)
+    {
+        spriteManager = manager;
+    }
 
     public void GenerateLevel(int level)
     {

@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aafa83398bb4b5c4b98e974cfe7d420d, type: 3}
   m_Name: SpritesConfig
   m_EditorClassIdentifier: 
-  starSprite: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
-  junkSprite: {fileID: 0}
+  starSprite: {fileID: 6068627999589527087, guid: a904482b585923d418f4ff0584d6b9c6, type: 3}
+  junkSprite: {fileID: 5270563346498890507, guid: dea5da9a05cbce54481b49c25f9ee661, type: 3}
   boardSprite: {fileID: 0}
   lineSprite: {fileID: 0}
-  starColor: {r: 0.8540381, g: 0.8867924, b: 0.037646834, a: 1}
-  junkColor: {r: 0.16359764, g: 0.048460316, b: 0.31132078, a: 1}
+  starColor: {r: 1, g: 1, b: 1, a: 1}
+  junkColor: {r: 1, g: 1, b: 1, a: 1}
   boardColor: {r: 0.1459594, g: 0.22017194, b: 0.754717, a: 1}
   lineColor: {r: 0.11627804, g: 0.6320754, b: 0.60535735, a: 1}

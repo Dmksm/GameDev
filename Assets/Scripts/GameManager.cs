@@ -8,7 +8,8 @@ public class GameManager : MonoBehaviour
     private LevelGenerator levelGenerator;
     private LineManager lineManager;
     private BoardManager boardManager;
-    
+    private SpriteManager spriteManager;
+
     private int currentLevel = 1;
     private int remainingLines = 3;
     private bool isInfiniteMode = false;
@@ -65,6 +66,10 @@ public class GameManager : MonoBehaviour
         uiObj.transform.SetParent(transform);
         uiManager = uiObj.AddComponent<UIManager>();
 
+        GameObject spriteObj = new GameObject("Sprite Manager");
+        spriteObj.transform.SetParent(transform);
+        spriteManager = spriteObj.AddComponent<SpriteManager>();
+
         GameObject levelObj = new GameObject("Level Generator");
         levelObj.transform.SetParent(transform);
         levelGenerator = levelObj.AddComponent<LevelGenerator>();
@@ -78,6 +83,8 @@ public class GameManager : MonoBehaviour
         boardManager = boardObj.AddComponent<BoardManager>();
 
         // Initialize managers
+        spriteManager.Initialize();
+        levelGenerator.SetSpriteManager(spriteManager);  // Using a public method instead
         uiManager.Initialize(this);
         levelGenerator.Initialize();
         lineManager.Initialize(this, boardManager);
