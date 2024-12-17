@@ -11,6 +11,7 @@ public class LineManager : MonoBehaviour
     private BoardManager boardManager;
     private GameManager gameManager;
     private LevelGenerator levelGenerator;
+    private SpriteManager spriteManager;
 
     private Material normalLineMaterial;
     private const float BOARD_SIZE = 100f;
@@ -22,6 +23,7 @@ public class LineManager : MonoBehaviour
         this.gameManager = gameManager;
         this.boardManager = boardManager;
         this.levelGenerator = FindObjectOfType<LevelGenerator>();
+        this.spriteManager = FindObjectOfType<SpriteManager>();
         mainCamera = Camera.main;
         CreateLineMaterials();
         CreatePreviewLine();
@@ -30,7 +32,19 @@ public class LineManager : MonoBehaviour
     private void CreateLineMaterials()
     {
         normalLineMaterial = new Material(Shader.Find("Sprites/Default"));
-        normalLineMaterial.color = Color.black;
+        if (spriteManager != null)
+        {
+            normalLineMaterial.color = spriteManager.GetLineColor();
+            Sprite lineSprite = spriteManager.GetLineSprite();
+            if (lineSprite != null)
+            {
+                normalLineMaterial.mainTexture = lineSprite.texture;
+            }
+        }
+        else
+        {
+            normalLineMaterial.color = Color.black;
+        }
     }
 
     private void CreatePreviewLine()
@@ -46,7 +60,7 @@ public class LineManager : MonoBehaviour
     {
         line.startWidth = LINE_WIDTH;
         line.endWidth = LINE_WIDTH;
-        line.material = new Material(Shader.Find("Sprites/Default"));
+        line.material = new Material(normalLineMaterial);
         line.positionCount = 2;
     }
 
@@ -139,8 +153,10 @@ public class LineManager : MonoBehaviour
             previewLine.SetPosition(1, points[1]);
             
             bool intersectsWithObject = CheckIntersectionWithObjects(startPoint, position);
-            previewLine.startColor = intersectsWithObject ? Color.red : Color.black;
-            previewLine.endColor = intersectsWithObject ? Color.red : Color.black;
+            Color lineColor = intersectsWithObject ? Color.red : 
+                (spriteManager != null ? spriteManager.GetLineColor() : Color.black);
+            previewLine.startColor = lineColor;
+            previewLine.endColor = lineColor;
         }
     }
 
@@ -171,8 +187,9 @@ public class LineManager : MonoBehaviour
 
                 line.SetPosition(0, points[0]);
                 line.SetPosition(1, points[1]);
-                line.startColor = Color.black;
-                line.endColor = Color.black;
+                Color lineColor = spriteManager != null ? spriteManager.GetLineColor() : Color.black;
+                line.startColor = lineColor;
+                line.endColor = lineColor;
 
                 drawnLines.Add(line);
                 gameManager.OnLineDrawn();

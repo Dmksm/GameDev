@@ -170,6 +170,16 @@ public class SpriteManager : MonoBehaviour
         }
     }
 
+    public Sprite GetLineSprite()
+    {
+        return spritesConfig?.lineSprite;
+    }
+
+    public Color GetLineColor()
+    {
+        return spritesConfig != null ? spritesConfig.lineColor : Color.black;
+    }
+
     private void EnsureRenderer(GameObject obj, Material material)
     {
         Debug.Log($"EnsureRenderer for {obj.name}");
