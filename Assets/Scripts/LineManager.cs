@@ -131,9 +131,24 @@ public class LineManager : MonoBehaviour
         return false;
     }
 
+    private bool IsPointInsideGameField(Vector3 point)
+    {
+        float boardWidth = 8f;
+        float boardHeight = 12f;
+        
+        float minX = -boardWidth/2;
+        float maxX = boardWidth/2;
+        float minY = -boardHeight/2;
+        float maxY = boardHeight/2;
+
+        return point.x >= minX && point.x <= maxX && 
+               point.y >= minY && point.y <= maxY;
+    }
+
     public void StartDrawing(Vector3 position)
     {
-        if (!isDrawing && gameManager.CanDrawLine())
+        // Проверяем, находится ли точка внутри игрового поля
+        if (!isDrawing && gameManager.CanDrawLine() && IsPointInsideGameField(position))
         {
             isDrawing = true;
             startPoint = position;
@@ -158,19 +173,6 @@ public class LineManager : MonoBehaviour
             previewLine.startColor = lineColor;
             previewLine.endColor = lineColor;
         }
-    }
-
-    private bool IsLineIntersectingObject(Vector3 lineStart, Vector3 lineEnd, Vector3 objectPosition, float radius)
-    {
-        Vector2 line2DStart = new Vector2(lineStart.x, lineStart.y);
-        Vector2 line2DEnd = new Vector2(lineEnd.x, lineEnd.y);
-        Vector2 objectPos2D = new Vector2(objectPosition.x, objectPosition.y);
-
-        Vector2 lineDirection = (line2DEnd - line2DStart).normalized;
-        float projection = Vector2.Dot(objectPos2D - line2DStart, lineDirection);
-        Vector2 nearestPoint = line2DStart + lineDirection * projection;
-
-        return Vector2.Distance(objectPos2D, nearestPoint) < radius;
     }
 
     public void FinishDrawing(Vector3 endPoint)
@@ -198,6 +200,19 @@ public class LineManager : MonoBehaviour
             isDrawing = false;
             previewLine.gameObject.SetActive(false);
         }
+    }
+
+    private bool IsLineIntersectingObject(Vector3 lineStart, Vector3 lineEnd, Vector3 objectPosition, float radius)
+    {
+        Vector2 line2DStart = new Vector2(lineStart.x, lineStart.y);
+        Vector2 line2DEnd = new Vector2(lineEnd.x, lineEnd.y);
+        Vector2 objectPos2D = new Vector2(objectPosition.x, objectPosition.y);
+
+        Vector2 lineDirection = (line2DEnd - line2DStart).normalized;
+        float projection = Vector2.Dot(objectPos2D - line2DStart, lineDirection);
+        Vector2 nearestPoint = line2DStart + lineDirection * projection;
+
+        return Vector2.Distance(objectPos2D, nearestPoint) < radius;
     }
 
     public void ClearLines()
